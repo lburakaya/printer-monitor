@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/data/
+**/appsettings.Local.json
+**/appsettings.Production.json
+.vs/
+.idea/
+.env
+*.user
+*.db
+*.db-shm
+*.db-wal
+publish/
+TestResults/
+*.log

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#112720"><meta name="description" content="Fabrika ağınızdaki yazıcı ve sarf malzemelerini tek ekrandan takip edin.">
+  <title>Printer Monitor · Yazıcı takip paneli</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="/app.css?v=2">
+  <script src="/app.js?v=2" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a href="/" class="brand"><span class="brand-icon">p<span>m</span></span><span>printer<span class="brand-light">monitor</span></span></a>
+    <nav aria-label="Ana menü">
+      <button class="nav-item active" id="navOverview">Yazıcılar</button>
+      <button class="nav-item" id="navAlerts">Uyarılar <span id="alertCount" class="nav-count">0</span></button>
+      <button class="nav-item" id="navSetup">Kurulum</button>
+    </nav>
+    <div class="header-tools"><span class="mode-pill" id="modeBadge">Bağlanıyor</span><button id="logout" class="text-button" hidden>Çıkış yap</button></div>
+  </header>
+  <div class="shell">
+    <main>
+      <section class="page-heading"><div><h1>Yazıcılarım</h1><p>Toner durumunu görün. Ayrıntılar için bir yazıcıya tıklayın.</p></div><button id="addPrinter" class="button primary"><span aria-hidden="true">＋</span> Yazıcı ekle</button></section>
+      <div class="demo-banner" id="demoBanner" hidden><div><strong>Demo modu</strong><span> · Örnek cihazları görüyorsunuz.</span></div><button id="demoGuide">Gerçek yazıcı bağla ↗</button></div>
+      <div class="page-error" id="pageError" role="alert" hidden></div>
+      <section class="stats" aria-label="Filo özeti">
+        <span class="stat"><strong id="statTotal">—</strong> yazıcı</span>
+        <span class="stat"><span class="stat-dot green"></span><strong id="statOnline">—</strong> erişilebilir</span>
+        <span class="stat" id="thresholdLabel"><span class="stat-dot amber"></span><strong id="statLow">—</strong> sarf uyarısı</span>
+        <span class="stat"><span class="stat-dot red"></span><strong id="statOffline">—</strong> bağlantı sorunu</span>
+      </section>
+      <section class="fleet-panel">
+        <div class="toolbar"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Yazıcı veya konum ara…" aria-label="Yazıcılarda ara"></label><select id="statusFilter" aria-label="Duruma göre filtrele"><option value="all">Tüm durumlar</option><option value="online">Erişilebilir</option><option value="low">Sarf uyarısı</option><option value="unreachable">Bağlantı sorunu</option><option value="unknown">Seviye bilinmiyor</option><option value="attention">Dikkat gerekenler</option></select><button id="refresh" class="button secondary">↻ Yenile</button></div>
+        <div id="printerRows" class="printer-grid" aria-label="Yazıcı kartları"><p class="empty">Yazıcılar yükleniyor…</p></div>
+        <footer class="panel-footer"><span id="resultCount">—</span><button id="export" class="text-button">↓ Rapor indir</button></footer>
+      </section>
+      <div class="bottom-note"><span>ⓘ</span> Toner seviyeleri cihazın bildirdiği değerlerdir. Bilinmeyen seviyeler %0 olarak gösterilmez.</div>
+      <footer class="main-footer"><span><span class="live-dot"></span><span id="serviceLabel">Bağlanılıyor</span> · <span id="pollLabel">Otomatik sorgulama</span></span><span id="lastUpdate">—</span></footer>
+    </main>
+  </div>
+
+  <dialog id="printerDialog" class="modal">
+    <form id="printerForm">
+      <div class="modal-heading"><div><div class="eyebrow">CİHAZ YÖNETİMİ</div><h2 id="formTitle">Yazıcı ekle</h2></div><button type="button" class="icon-button close-dialog" aria-label="Kapat">×</button></div>
+      <p class="form-intro">Bağlantı bilgilerini girin. Kaydın ardından okuma testi yapılır.</p>
+      <input type="hidden" name="id">
+      <div class="form-grid">
+        <label class="full">Yazıcı adı<input name="name" required maxlength="100" placeholder="Örn. Üretim ofisi"></label>
+        <label>IP adresi veya sunucu adı<input name="host" required maxlength="253" placeholder="192.168.1.50" spellcheck="false"></label>
+        <label>UDP portu<input name="port" type="number" min="1" max="65535" value="161" required></label>
+        <label class="full">Konum / departman<input name="location" maxlength="100" placeholder="Örn. A Blok · Üretim"></label>
+        <label>SNMP sürümü<select name="version"><option value="v2c">SNMP v2c</option><option value="v3">SNMP v3 · authPriv</option><option value="v1">SNMP v1 · eski cihazlar</option></select></label>
+        <label id="demoScenarioField">Demo senaryosu<select name="demoScenario"><option value="healthy">Normal toner</option><option value="low">Düşük toner</option><option value="unreachable">Yanıt alınamıyor</option><option value="unknown">Seviye desteklenmiyor</option></select></label>
+        <label class="full" id="communityField">Read-only community<input name="community" type="password" maxlength="255" autocomplete="new-password" placeholder="Yazıcıdaki okuma bilgisi"></label>
+        <div class="full form-grid" id="v3Fields" hidden>
+          <label>Kullanıcı adı<input name="username" maxlength="64" autocomplete="off"></label>
+          <label>Kimlik doğrulama<select name="authProtocol"><option value="SHA256">SHA-256</option><option value="SHA1">SHA-1 · eski cihaz uyumu</option></select></label>
+          <label>Kimlik doğrulama parolası<input name="authPassword" type="password" maxlength="255" autocomplete="new-password"></label>
+          <label>Şifreleme parolası (AES-128)<input name="privacyPassword" type="password" maxlength="255" autocomplete="new-password"></label>
+        </div>
+      </div>
+      <p class="field-note" id="credentialNote">Bilgiler yalnızca sunucuda saklanır. Yazıcıya ayar değiştirme isteği gönderilmez.</p>
+      <div class="form-error" id="formError" role="alert" hidden></div>
+      <div class="modal-footer"><button type="button" class="button secondary close-dialog">Vazgeç</button><button type="submit" class="button primary" id="savePrinter">Kaydet ve test et</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog" class="modal detail-modal"><div class="modal-heading"><div><div class="eyebrow">CİHAZ DETAYI</div><h2 id="detailTitle">Yazıcı</h2></div><button class="icon-button close-dialog" aria-label="Kapat">×</button></div><div id="detailContent"></div><div class="modal-footer"><button id="deletePrinter" class="button danger">Yazıcıyı sil</button><div><button id="editPrinter" class="button secondary">Düzenle</button> <button id="testPrinter" class="button primary">Bağlantıyı test et</button></div></div></dialog>
+
+  <dialog id="guideDialog" class="modal"><div class="modal-heading"><div><div class="eyebrow">BAŞLANGIÇ</div><h2>Kendi ağınızda çalıştırın.</h2></div><button class="icon-button close-dialog" aria-label="Kapat">×</button></div><div class="guide-content"><p>Bu uygulama yazıcılara erişebilen bir bilgisayar veya sunucuda çalışır. Kullanıcılar tarayıcılarıyla o sunucuya bağlanır.</p><ol><li><strong>Gerçek cihaz modunu yapılandırın.</strong><p>Sunucuda <code>Monitor__DemoMode=false</code>, yönetici parolası ve izin verilen IPv4 ağlarını belirleyin. Ayrıntılı komutlar proje README dosyasındadır.</p></li><li><strong>Uygulamayı yeniden başlatın ve giriş yapın.</strong><p>Demo ve gerçek cihaz kayıtları ayrı veritabanlarında tutulur.</p></li><li><strong>Yazıcıyı ekleyip test edin.</strong><p>IP, SNMP sürümü ve read-only erişim bilgilerini girin. Sunucudan yazıcıya UDP 161 erişimi açık olmalıdır.</p></li></ol><div class="guide-callout">SNMPv3: authPriv, SHA-256 / SHA-1 ve AES-128 desteklenir. İlk sürüm standart Printer-MIB kullanır; üreticiye özel alanlar daha sonra adaptörlerle eklenebilir.</div><p class="field-note">SNMP yanıtı alınmaması tek başına cihazın kapalı veya parolanın yanlış olduğunu kanıtlamaz. Ağ, port ve cihaz yapılandırmasını birlikte kontrol edin.</p></div></dialog>
+
+  <dialog id="loginDialog" class="modal login-modal"><form id="loginForm"><div class="eyebrow">PRINTER MONITOR</div><h2>Çalışma alanına giriş</h2><p>Sunucuda tanımlanan yönetici parolasını kullanın.</p><label>Yönetici parolası<input name="password" type="password" required autocomplete="current-password" maxlength="1024"></label><div id="loginError" class="form-error" hidden role="alert"></div><button class="button primary" type="submit">Giriş yap</button></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

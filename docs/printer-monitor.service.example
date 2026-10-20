@@ -1,0 +1,28 @@
+# Adapt paths and create the printermonitor account before installation.
+# Publish with: dotnet publish src/PrinterMonitor -c Release -r linux-x64 --self-contained true -o publish/linux-x64
+# /etc/printer-monitor.env must be readable only by administrators/service account.
+[Unit]
+Description=Printer Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=printermonitor
+Group=printermonitor
+WorkingDirectory=/opt/printer-monitor
+ExecStart=/opt/printer-monitor/PrinterMonitor --contentRoot /opt/printer-monitor
+EnvironmentFile=/etc/printer-monitor.env
+Environment=Monitor__DemoMode=false
+Environment=Monitor__DataDirectory=/var/lib/printer-monitor
+Environment=Urls=http://127.0.0.1:5080
+StateDirectory=printer-monitor
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
